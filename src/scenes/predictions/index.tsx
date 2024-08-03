@@ -1,18 +1,20 @@
 import DashboardBox from "@/components/DashboardBox";
 import FlexBetween from "@/components/FlexBetween";
 import { useGetKpisQuery } from "@/state/api";
-import { Box, Button, Tooltip, Typography, useTheme } from "@mui/material";
+import { Box, Button, Typography, useTheme } from "@mui/material";
 import { useMemo, useState } from "react";
 import {
   ResponsiveContainer,
   LineChart,
   CartesianGrid,
+  Tooltip,
   XAxis,
   YAxis,
   Legend,
   Line,
   Label,
 } from "recharts";
+import regression, { DataPoint} from "regression"
 
 const Predictions = () => {
   const { palette } = useTheme();
@@ -21,6 +23,23 @@ const Predictions = () => {
 
   const formattedData = useMemo(() => {
     if (!kpiData) return [];
+    const monthData = kpiData[0].monthlyData
+
+    const formatted: Array<DataPoint> = monthData.map(
+      ({ revenue}, i: number) => {
+        return [i, revenue]
+      }
+    )
+    const regressionLine = regression.linear(formatted)
+
+    return monthData.map(({month, revenue}, i: number) => {
+      return {
+        name: month,
+        "Actual Revenue": revenue,
+        "Regression Line": regressionLine.points[i][1],
+        "Predicted Revenue": regressionLine.predict(i + 12)[1]
+      }
+    })
   }, [kpiData]);
   return (
     <DashboardBox width="100%" height="100%" p="1rem" overflow="hidden">
@@ -92,7 +111,7 @@ const Predictions = () => {
 
           {isPredictions && (
             <Line
-              type="monotone"
+              strokeDasharray="5 5"
               dataKey="Predicted Revenue"
               stroke={palette.secondary[500]}
             />
